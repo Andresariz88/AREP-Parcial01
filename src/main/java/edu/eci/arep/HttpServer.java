@@ -5,7 +5,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.*;
 import java.io.*;
-import java.util.List;
 
 public class HttpServer {
     public static void main(String[] args) throws IOException {
@@ -50,7 +49,7 @@ public class HttpServer {
             outputLine = "";
 
             if (request.startsWith("/consulta?comando=")) {
-                String command = request.replace("/consulta?comando=", "").replace("%20", "");
+                String command = request.replace("/consulta?comando=", "").replace("%20", "").replace("%22", "");
                 try {
                     String[] params = command.split("\\(")[1].replace(")", "").split(",");
                     String body = "";
@@ -74,29 +73,76 @@ public class HttpServer {
                             body += me + "</br>";
                         }
                         outputLine = new HttpResponse(body).getResponse();
-                        System.out.println(outputLine);
                     }
 
                     else if (command.toLowerCase().startsWith("invoke")) {
-                        Method method = clazz.getMethod(params[1]);
+                        Method method = clazz.getDeclaredMethod(params[1]);
                         body = "Retorno del método: </br>" + method.invoke(null);
                         outputLine = new HttpResponse(body).getResponse();
 
                     }
 
                     else if (command.toLowerCase().startsWith("unaryinvoke")) {
-                        Method method = clazz.getMethod(params[1]);
-                        Class<?> paramType = Class.forName(params[2]);
-                        String value = params[3];
-                        System.out.println(method.invoke(value));
+                        Class<?>[] parameterTypes = new Class<?>[1];
+                        if (params[2].equals("int")) {
+                            parameterTypes[0] = int.class;
+                        } else if (params[2].equals("double")) {
+                            parameterTypes[0] = double.class;
+                        } else {
+                            parameterTypes[0] = String.class;
+                        }
+                        Method method = clazz.getDeclaredMethod(params[1], parameterTypes[0]);
+                        if (parameterTypes[0].equals(String.class)) {
+                            String value = params[3];
+                            body = "Retorno del método: </br>" + method.invoke(null, value);
+                        } else if (parameterTypes[0].equals(double.class)) {
+                            Double value = Double.valueOf(params[3]);
+                            body = "Retorno del método: </br>" + method.invoke(null, value);
+                        } else {
+                            Integer value = Integer.valueOf(params[3]);
+                            body = "Retorno del método: </br>" + method.invoke(null, value);
+                        }
+                        outputLine = new HttpResponse(body).getResponse();
+                    }
 
-                        //Object<paramType> paramValue = params[3];
+                    else if (command.toLowerCase().startsWith("binaryinvoke")) {
+                        Class<?>[] parameterTypes = new Class<?>[2];
+                        if (params[2].equals("int")) {
+                            parameterTypes[0] = int.class;
+                        } else if (params[2].equals("double")) {
+                            parameterTypes[0] = double.class;
+                        } else {
+                            parameterTypes[0] = String.class;
+                        }
+
+                        if (params[4].equals("int")) {
+                            parameterTypes[1] = int.class;
+                        } else if (params[2].equals("double")) {
+                            parameterTypes[1] = double.class;
+                        } else {
+                            parameterTypes[1] = String.class;
+                        }
+
+                        Method method = clazz.getDeclaredMethod(params[1], parameterTypes);
+                        if (parameterTypes[0].equals(String.class)) {
+                            String[] value = new String[] {params[3], params[5]};
+                            body = "Retorno del método: </br>" + method.invoke(null, value);
+                        } else if (parameterTypes[0].equals(double.class)) {
+                            Double[] value = {Double.valueOf(params[3]), Double.valueOf(params[5])};
+                            body = "Retorno del método: </br>" + method.invoke(null, value);
+                        } else {
+                            Integer[] value = {Integer.valueOf(params[3]), Integer.valueOf(params[5])};
+                            body = "Retorno del método: </br>" + method.invoke(null, value);
+                        }
+                        outputLine = new HttpResponse(body).getResponse();
                     }
 
                     }  catch (ClassNotFoundException e) {
                     outputLine = new HttpResponse("No encontré la clase :(").getResponse();
+                    throw new RuntimeException(e);
                 } catch (NoSuchMethodException e) {
                     outputLine = new HttpResponse("No encontré ese método :(").getResponse();
+                    throw new RuntimeException(e);
                 } catch (InvocationTargetException | IllegalAccessException e) {
                     throw new RuntimeException(e);
                 }
@@ -123,15 +169,15 @@ public class HttpServer {
                 "<!DOCTYPE html>\n" +
                 "<html>\n" +
                 "    <head>\n" +
-                "        <title>Form Example</title>\n" +
+                "        <title>Reflective ChatGPT</title>\n" +
                 "        <meta charset=\"UTF-8\">\n" +
                 "        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" +
                 "    </head>\n" +
                 "    <body>\n" +
-                "        <h1>Form with GET</h1>\n" +
+                "        <h1>Reflective ChatGPT</h1>\n" +
                 "        <form action=\"/hello\">\n" +
                 "            <label for=\"name\">Name:</label><br>\n" +
-                "            <input type=\"text\" id=\"name\" name=\"name\" value=\"John\"><br><br>\n" +
+                "            <input type=\"text\" style=\"width: 600px;\" id=\"name\" name=\"name\" value=\"John\"><br><br>\n" +
                 "            <input type=\"button\" value=\"Submit\" onclick=\"loadGetMsg()\">\n" +
                 "        </form> \n" +
                 "        <div id=\"getrespmsg\"></div>\n" +
