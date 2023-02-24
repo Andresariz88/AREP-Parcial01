@@ -55,16 +55,10 @@ public class HttpServer {
                     String body = "";
                     Class<?> clazz = Class.forName(params[0]);
 
-                    for (String st : params) {
-                        System.out.println(st);
-                    }
-
                     if (command.toLowerCase().startsWith("class")) {
-                        //System.out.println(clazz);
                         body += "Nombre de la clase: </br>" + clazz.getName() + "</br>";
                         body += "</br>Campos: </br>";
                         for (Field fi : clazz.getFields()) {
-                            //System.out.println(fi);
                             body += fi + "</br>";
                         }
                         body += "</br>Métodos:</br>";
@@ -72,14 +66,11 @@ public class HttpServer {
                             //System.out.println(me);
                             body += me + "</br>";
                         }
-                        outputLine = new HttpResponse(body).getResponse();
                     }
 
                     else if (command.toLowerCase().startsWith("invoke")) {
                         Method method = clazz.getDeclaredMethod(params[1]);
                         body = "Retorno del método: </br>" + method.invoke(null);
-                        outputLine = new HttpResponse(body).getResponse();
-
                     }
 
                     else if (command.toLowerCase().startsWith("unaryinvoke")) {
@@ -102,7 +93,6 @@ public class HttpServer {
                             Integer value = Integer.valueOf(params[3]);
                             body = "Retorno del método: </br>" + method.invoke(null, value);
                         }
-                        outputLine = new HttpResponse(body).getResponse();
                     }
 
                     else if (command.toLowerCase().startsWith("binaryinvoke")) {
@@ -124,25 +114,31 @@ public class HttpServer {
                         }
 
                         Method method = clazz.getDeclaredMethod(params[1], parameterTypes);
+
+                        Object[] value = new Object[2];
                         if (parameterTypes[0].equals(String.class)) {
-                            String[] value = new String[] {params[3], params[5]};
-                            body = "Retorno del método: </br>" + method.invoke(null, value);
+                            value[0] = params[3];
                         } else if (parameterTypes[0].equals(double.class)) {
-                            Double[] value = {Double.valueOf(params[3]), Double.valueOf(params[5])};
-                            body = "Retorno del método: </br>" + method.invoke(null, value);
+                            value[0] = Double.valueOf(params[3]);
                         } else {
-                            Integer[] value = {Integer.valueOf(params[3]), Integer.valueOf(params[5])};
-                            body = "Retorno del método: </br>" + method.invoke(null, value);
+                            value[0] = Integer.valueOf(params[3]);
                         }
-                        outputLine = new HttpResponse(body).getResponse();
+                        if (parameterTypes[1].equals(String.class)) {
+                            value[1] = params[5];
+                        } else if (parameterTypes[0].equals(double.class)) {
+                            value[1] = Double.valueOf(params[5]);
+                        } else {
+                            value[1] = Integer.valueOf(params[5]);
+                        }
+                        body = "Retorno del método: </br>" + method.invoke(null, value);
                     }
 
-                    }  catch (ClassNotFoundException e) {
+                    outputLine = new HttpResponse(body).getResponse();
+
+                } catch (ClassNotFoundException e) {
                     outputLine = new HttpResponse("No encontré la clase :(").getResponse();
-                    throw new RuntimeException(e);
                 } catch (NoSuchMethodException e) {
                     outputLine = new HttpResponse("No encontré ese método :(").getResponse();
-                    throw new RuntimeException(e);
                 } catch (InvocationTargetException | IllegalAccessException e) {
                     throw new RuntimeException(e);
                 }
@@ -150,20 +146,16 @@ public class HttpServer {
                 outputLine = index();
             }
 
-
             out.println(outputLine);
-
             out.close();
-
             in.close();
-
             clientSocket.close();
         }
         serverSocket.close();
     }
 
     private static String index() {
-        return  "HTTP/1.1 200 OK\r\n"
+        return "HTTP/1.1 200 OK\r\n"
                 + "Content-Type: text/html\r\n"
                 + "\r\n" +
                 "<!DOCTYPE html>\n" +
